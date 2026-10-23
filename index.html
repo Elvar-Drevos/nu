@@ -198,7 +198,8 @@
 <script>
 /* ================= Instellingen ================= */
 const FEED_URL     = 'https://www.nu.nl/rss/Algemeen';
-const ITEMS        = 3;
+const ITEMS        = 2;              // aantal berichten (nieuwste eerst)
+const LOOP         = false;          // false = na het laatste bericht stoppen; true = opnieuw beginnen
 const SLIDE_MS     = 10000;          // minimale tijd per artikel (wordt langer als de inleiding moet scrollen)
 const FADE_MS      = 1600;           // duur van de overgang
 const REFRESH_MS   = 5 * 60 * 1000;  // feed elke 5 minuten verversen
@@ -316,7 +317,7 @@ function stripHtml(s) {
 
 function parseFeed(xmlText) {
   const xml = new DOMParser().parseFromString(xmlText, 'text/xml');
-  return [...xml.querySelectorAll('item')].slice(0, ITEMS).map(it => {
+  return [...xml.querySelectorAll('item')].map(it => {
     const get = tag => it.getElementsByTagName(tag)[0];
     const enc = get('enclosure');
     const media = it.getElementsByTagNameNS('*', 'content')[0] || it.getElementsByTagNameNS('*', 'thumbnail')[0];
@@ -329,7 +330,7 @@ function parseFeed(xmlText) {
       cat:   cats[0] || 'Nieuws',
       img:   enc?.getAttribute('url') || media?.getAttribute('url') || ''
     };
-  });
+  }).sort((a, b) => b.date - a.date).slice(0, ITEMS);
 }
 
 /* ---------- Grote foto zoeken ---------- */
@@ -510,6 +511,7 @@ function show(n) {
 function advance() {
   let nxt = current + 1;
   if (nxt >= slides.length) {
+    if (!LOOP) { log('laatste bericht getoond, gestopt'); return; }   // blijft op het laatste bericht staan
     if (pending) { render(pending); pending = null; }
     nxt = 0;
   }
@@ -558,7 +560,7 @@ async function start() {
 }
 
 let lastTitles = '';
-setInterval(async () => {
+if (LOOP) setInterval(async () => {
   try {
     const items = await getFeed();
     const titles = items.map(a => a.title).join('|');
