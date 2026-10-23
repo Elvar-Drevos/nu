@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NU.nl Nieuws rustig</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #FF6823;
+    --bg: #07080b;
+    --text: #ffffff;
+    --muted: rgba(255,255,255,.86);
+    --fade: 1600ms;
+    --slide: 14000ms;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); }
+  body { font-family: 'DM Sans', sans-serif; cursor: none; -webkit-font-smoothing: antialiased; }
+
+  /* ---------- Slides ---------- */
+  #stage { position: fixed; inset: 0; }
+  .slide {
+    position: absolute; inset: 0;
+    opacity: 0; transition: opacity var(--fade) ease-in-out;
+    overflow: hidden;
+  }
+  .slide.active { opacity: 1; z-index: 2; }
+  .slide.leaving { opacity: 0; z-index: 1; }
+
+  /* Wazige vulling achter de foto, voor als de foto niet precies past */
+  .fill {
+    position: absolute; inset: -6%;
+    background-size: cover; background-position: center;
+    filter: blur(40px) brightness(.55) saturate(1.2);
+  }
+  .bg {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center 30%;
+    transform: scale(1);
+    will-change: transform;
+  }
+  .slide.active .bg { animation: kb-a calc(var(--slide) + var(--fade) * 2) ease-out forwards; }
+  .slide.active[data-kb="1"] .bg { animation-name: kb-b; }
+  .slide.active[data-kb="2"] .bg { animation-name: kb-c; }
+  @keyframes kb-a { from { transform: scale(1);    } to { transform: scale(1.07) translate(-1%, -.5%); } }
+  @keyframes kb-b { from { transform: scale(1.07) translate(1%, .5%); } to { transform: scale(1); } }
+  @keyframes kb-c { from { transform: scale(1.01) translate(-1%, 0); } to { transform: scale(1.07) translate(1%, -.5%); } }
+
+  /* Alleen donker waar tekst staat; de rest van de foto blijft helder */
+  .shade {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(7,8,11,.5) 0%, rgba(7,8,11,0) 14%),
+      linear-gradient(0deg, rgba(7,8,11,.88) 0%, rgba(7,8,11,.6) 22%, rgba(7,8,11,0) 46%);
+  }
+
+  /* ---------- Text ---------- */
+  .content {
+    position: absolute; left: 6vmin; right: 6vmin; bottom: 10vmin;
+    max-width: 1500px;
+    text-shadow: 0 2px 18px rgba(0,0,0,.55);
+  }
+  .meta {
+    display: flex; align-items: center; gap: 1.6vmin;
+    font-family: 'DM Mono', monospace; font-size: clamp(14px, 1.9vmin, 30px);
+    letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 2.2vmin;
+  }
+  .tag {
+    background: var(--accent); color: #fff; font-weight: 500;
+    padding: .45em .9em; border-radius: 999px; text-shadow: none;
+  }
+  .title {
+    font-family: 'Sora', sans-serif; font-weight: 700;
+    font-size: clamp(30px, 5.6vmin, 110px); line-height: 1.08; letter-spacing: -.02em;
+    margin-bottom: 2.2vmin;
+    text-wrap: balance;
+  }
+  .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; }
+  .w > span { display: inline-block; transform: translateY(110%); }
+
+  .intro {
+    --lines: 3;
+    font-size: clamp(18px, 2.6vmin, 50px); line-height: 1.45; color: var(--muted);
+    max-width: 62ch;
+    max-height: calc(1.45em * var(--lines));
+    overflow: hidden;
+  }
+  .intro.scrolls {
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 82%, transparent 100%);
+            mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 82%, transparent 100%);
+  }
+  .intro-inner { will-change: transform; }
+
+  .meta, .intro { opacity: 0; transform: translateY(24px); }
+  .slide.active .meta  { animation: rise 900ms cubic-bezier(.2,.8,.2,1) 500ms forwards; }
+  .slide.active .w > span { animation: up 900ms cubic-bezier(.2,.8,.2,1) forwards; animation-delay: calc(700ms + var(--i) * 45ms); }
+  .slide.active .intro { animation: rise 1100ms cubic-bezier(.2,.8,.2,1) 1400ms forwards; }
+  @keyframes up   { to { transform: translateY(0); } }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  /* ---------- Chrome ---------- */
+  .top {
+    position: fixed; z-index: 10; top: 5vmin; left: 6vmin; right: 6vmin;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 1.4vmin;
+    font-family: 'Sora', sans-serif; font-weight: 800;
+    font-size: clamp(22px, 4vmin, 72px); letter-spacing: -.03em;
+  }
+  .logo img, .logo svg { height: clamp(48px, 9vmin, 180px); width: auto; display: block; filter: drop-shadow(0 4px 18px rgba(0,0,0,.45)); }
+  .logo .mark { background: #fff; color: #07080b; padding: .12em .38em; border-radius: .22em; line-height: 1; }
+  .clock {
+    font-family: 'DM Mono', monospace; font-size: clamp(20px, 3.4vmin, 60px);
+    font-weight: 500; letter-spacing: .02em;
+    background: rgba(7,8,11,.45); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.12); border-radius: 999px; padding: .3em .8em;
+  }
+
+  .progress {
+    position: fixed; z-index: 10; left: 6vmin; right: 6vmin; bottom: 5vmin;
+    display: flex; gap: 1.2vmin;
+  }
+  .bar { flex: 1; height: max(4px, .55vmin); background: rgba(255,255,255,.2); border-radius: 99px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; }
+  .bar.done i { width: 100%; }
+  .bar.run i { animation: fill linear forwards; }
+  @keyframes fill { to { width: 100%; } }
+
+  /* ---------- States ---------- */
+  #status {
+    position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2vmin;
+    background: var(--bg); transition: opacity 800ms ease;
+    font-family: 'DM Mono', monospace; font-size: clamp(14px, 2vmin, 30px); color: var(--muted);
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  #status.hide { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 6vmin; height: 6vmin; border-radius: 50%;
+    border: .6vmin solid rgba(255,255,255,.12); border-top-color: var(--accent);
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Debug: voeg ?debug toe aan de URL om te zien welke foto en resolutie gebruikt wordt */
+  .debug {
+    position: absolute; z-index: 5; top: 14vmin; left: 6vmin; max-width: 80vw;
+    font: 14px/1.4 'DM Mono', monospace; background: rgba(0,0,0,.75); padding: 8px 12px; border-radius: 8px;
+    word-break: break-all;
+  }
+
+  @media (orientation: portrait) {
+    .title { font-size: clamp(30px, 7.6vmin, 150px); }
+    .intro { --lines: 4; font-size: clamp(18px, 3.3vmin, 64px); }
+    .shade {
+      background:
+        linear-gradient(180deg, rgba(7,8,11,.5) 0%, rgba(7,8,11,0) 10%),
+        linear-gradient(0deg, rgba(7,8,11,.9) 0%, rgba(7,8,11,.6) 20%, rgba(7,8,11,0) 40%);
+    }
+  }
+
+  /* ================= Rustige versie (Yodeck / Raspberry Pi) ================= */
+  /* Alleen: zoom op de foto, overgang tussen artikelen en scrollen van de inleiding. */
+  .progress { display: none !important; }
+  .w > span,
+  .slide.active .w > span { transform: none !important; animation: none !important; }
+  .meta, .intro,
+  .slide.active .meta,
+  .slide.active .intro { opacity: 1 !important; transform: none !important; animation: none !important; }
+  /* Zware effecten weg: geen blur, geen backdrop-filter, lichtere schaduw */
+  .fill { display: none !important; }
+  .clock { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: rgba(7,8,11,.6) !important; }
+  .content { text-shadow: 0 1px 6px rgba(0,0,0,.5); }
+  .logo img, .logo svg { filter: none !important; }
+  .bg { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+  .content { bottom: 7vmin; }
+
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<div class="top">
+  <div class="logo" id="logo"></div>
+  <div class="clock" id="clock">--:--</div>
+</div>
+
+<div class="progress" id="progress"></div>
+
+<div id="status"><div class="spinner"></div><div id="statusText">Nieuws laden</div></div>
+
+<script>
+/* ================= Instellingen ================= */
+const FEED_URL     = 'https://www.nu.nl/rss/Algemeen';
+const ITEMS        = 3;
+const SLIDE_MS     = 14000;          // minimale tijd per artikel (wordt langer als de inleiding moet scrollen)
+const FADE_MS      = 1600;           // duur van de overgang
+const REFRESH_MS   = 5 * 60 * 1000;  // feed elke 5 minuten verversen
+const SCROLL_DELAY = 3500;           // wachttijd voordat de inleiding gaat scrollen
+const SCROLL_SPEED = 2200;           // ms per regel tekst bij het scrollen
+const LOGO_URL     = '';             // leeg = ingebouwd NU.nl-logo; of een link naar een ander logobestand
+
+// Volgorde waarin pagina's worden opgehaald. Eerst direct, dan via proxies.
+const SOURCES = [
+  u => u,
+  u => `https://verkeer-proxy.thomas-schorn-zwolle.workers.dev/?url=${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`
+];
+/* ================================================ */
+
+const DEBUG = /[?&]debug/.test(location.search);
+const SRC_NAMES = ['direct', 'eigen proxy', 'allorigins', 'corsproxy'];
+let dbgBox = null;
+function log(...parts) {
+  console.log('[NU.nl]', ...parts);
+  if (!DEBUG) return;
+  if (!dbgBox) {
+    dbgBox = document.createElement('div');
+    dbgBox.id = 'dbg';
+    document.body.appendChild(dbgBox);
+  }
+  const line = document.createElement('div');
+  line.textContent = new Date().toLocaleTimeString('nl-NL') + '  ' + parts.join(' ');
+  dbgBox.appendChild(line);
+  while (dbgBox.children.length > 40) dbgBox.firstChild.remove();
+  dbgBox.scrollTop = dbgBox.scrollHeight;
+}
+function short(u) { return String(u).replace(/^https?:\/\/(www\.)?/, '').slice(0, 70); }
+document.documentElement.style.setProperty('--fade', FADE_MS + 'ms');
+
+const stage = document.getElementById('stage');
+const progress = document.getElementById('progress');
+const statusEl = document.getElementById('status');
+const statusText = document.getElementById('statusText');
+
+// Logo (officieel NU.nl-logo, ingebouwd als SVG)
+const NU_LOGO = `<svg viewBox="0 0 133.57635 119.38008" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NU.nl"><g transform="translate(-41.843256,-10.593749)"><g transform="matrix(5.5649859,0,0,5.5649859,41.843256,3.5039571)"><path fill="#020051" d="m 10.714,1.846 c 4.554,0 8.408,3.007 9.689,7.145 a 3.043,3.043 0 0 0 0,6.018 c -1.281,4.138 -5.135,7.145 -9.69,7.145 C 5.114,22.154 0.572,17.607 0.572,12 0.572,6.392 5.114,1.846 10.715,1.846 Z"/><path fill="none" stroke="#ffffff" stroke-width="0.572" d="m 10.714,1.56 c 4.602,0 8.62,3.012 9.961,7.347 l 0.1,0.317 -0.33,0.05 A 2.757,2.757 0 0 0 18.099,12 a 2.756,2.756 0 0 0 2.346,2.726 l 0.33,0.05 -0.1,0.317 A 10.433,10.433 0 0 1 10.714,22.44 C 4.954,22.44 0.286,17.765 0.286,12 0.286,6.234 4.954,1.56 10.714,1.56 Z"/><path fill="#b50c16" d="m 18.358,11.955 a 2.538,2.538 0 0 1 2.535,-2.539 2.5385,2.5385 0 0 1 0,5.077 2.538,2.538 0 0 1 -2.535,-2.538 z"/><path fill="none" stroke="#ffffff" stroke-width="0.572" d="m 18.072,11.955 a 2.823,2.823 0 0 1 2.821,-2.824 2.824,2.824 0 0 1 0,5.648 2.823,2.823 0 0 1 -2.821,-2.824 z"/><path fill="#ffffff" d="m 3.675,7.92 c 0,-0.155 0.156,-0.323 0.313,-0.323 h 5.968 c 0.165,0 0.272,0.162 0.272,0.322 v 8.2 c 0,0.155 -0.088,0.284 -0.272,0.284 h -2.42 c -0.162,0 -0.24,-0.113 -0.24,-0.285 v -6.1 c 0,-0.427 -0.69,-0.416 -0.69,10e-4 v 6.1 a 0.282,0.282 0 0 1 -0.28,0.284 H 3.988 c -0.167,0 -0.313,-0.111 -0.313,-0.285 z m 7.243,8.215 c 0,0.154 0.026,0.268 0.182,0.268 h 5.969 c 0.165,0 0.23,-0.109 0.23,-0.268 v -8.2 c 0,-0.155 -0.046,-0.338 -0.23,-0.338 h -2.42 c -0.162,0 -0.282,0.167 -0.282,0.338 v 6.102 c 0,0.426 -0.69,0.415 -0.69,-0.002 v -6.1 c 0,-0.165 -0.09,-0.338 -0.239,-0.338 H 11.1 c -0.166,0 -0.182,0.165 -0.182,0.338 z m 10.255,-3.156 h -0.392 v -0.757 c 0,-0.16 -0.009,-0.264 -0.025,-0.31 a 0.216,0.216 0 0 0 -0.083,-0.11 0.23,0.23 0 0 0 -0.135,-0.04 0.314,0.314 0 0 0 -0.183,0.056 0.285,0.285 0 0 0 -0.111,0.148 c -0.02,0.061 -0.03,0.175 -0.03,0.34 v 0.672 h -0.391 v -1.483 h 0.363 v 0.218 a 0.593,0.593 0 0 1 0.489,-0.251 0.58,0.58 0 0 1 0.237,0.047 0.388,0.388 0 0 1 0.239,0.284 c 0.015,0.061 0.022,0.15 0.022,0.264 v 0.921 m 0.399,0 v -2.047 h 0.392 v 2.047 h -0.392"/></g></g></svg>`;
+document.getElementById('logo').innerHTML = LOGO_URL ? `<img src="${LOGO_URL}" alt="NU.nl">` : NU_LOGO;
+
+// Klok
+function tick() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+}
+tick(); setInterval(tick, 1000);
+
+/* ---------- Ophalen ---------- */
+let workingSource = null;   // onthoud welke bron werkt
+
+async function fetchText(url, timeout = 10000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    return await r.text();
+  } finally { clearTimeout(t); }
+}
+
+async function fetchVia(url, check, timeout = 8000) {
+  const order = workingSource ? [workingSource, ...SOURCES.filter(s => s !== workingSource)] : SOURCES;
+  for (const make of order) {
+    const name = SRC_NAMES[SOURCES.indexOf(make)] || '?';
+    try {
+      const txt = await fetchText(make(url), timeout);
+      if (check(txt)) { workingSource = make; return txt; }
+      log('onverwacht antwoord', name, short(url), '→', txt.length, 'tekens');
+    } catch (e) { log('mislukt', name, short(url), '→', (e && (e.name === 'AbortError' ? 'timeout' : e.message)) || 'fout'); }
+  }
+  throw new Error('niet bereikbaar');
+}
+
+// Probeert de feed met en zonder cache-buster, en valt terug op de algemene /rss-feed.
+const FEED_FALLBACKS = [FEED_URL, 'https://www.nu.nl/rss'];
+let workingFeed = null;
+
+async function getFeed() {
+  const bases = workingFeed ? [workingFeed] : [...new Set(FEED_FALLBACKS)];
+  const errors = [];
+  for (const base of bases) {
+    for (const url of [base + (base.includes('?') ? '&' : '?') + '_=' + Date.now(), base]) {
+      try {
+        const txt = await fetchVia(url, t => t.includes('<item'));
+        workingFeed = base;
+        console.log('[NU.nl] feed geladen via', url);
+        return parseFeed(txt);
+      } catch (e) { errors.push(url); }
+    }
+  }
+  workingFeed = null;
+  console.warn('[NU.nl] geen feed bereikbaar, geprobeerd:', errors);
+  throw new Error('Feed niet bereikbaar');
+}
+
+function stripHtml(s) {
+  const d = document.createElement('div');
+  d.innerHTML = s || '';
+  return (d.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+function parseFeed(xmlText) {
+  const xml = new DOMParser().parseFromString(xmlText, 'text/xml');
+  return [...xml.querySelectorAll('item')].slice(0, ITEMS).map(it => {
+    const get = tag => it.getElementsByTagName(tag)[0];
+    const enc = get('enclosure');
+    const media = it.getElementsByTagNameNS('*', 'content')[0] || it.getElementsByTagNameNS('*', 'thumbnail')[0];
+    const cats = [...it.getElementsByTagName('category')].map(c => c.textContent.trim()).filter(Boolean);
+    return {
+      title: stripHtml(get('title')?.textContent),
+      intro: stripHtml(get('description')?.textContent),
+      link:  (get('link')?.textContent || '').trim(),
+      date:  new Date(get('pubDate')?.textContent || Date.now()),
+      cat:   cats[0] || 'Nieuws',
+      img:   enc?.getAttribute('url') || media?.getAttribute('url') || ''
+    };
+  });
+}
+
+/* ---------- Grote foto zoeken ---------- */
+// Artikelpagina ophalen (voor de grote foto)
+async function fetchArticle(link) {
+  if (!link) return '';
+  try {
+    const html = await fetchVia(link, t => t.includes('<meta'));
+    const via = SRC_NAMES[SOURCES.indexOf(workingSource)] || '?';
+    const title = (html.match(/<title[^>]*>([^<]*)/i) || [, ''])[1].trim().slice(0, 60);
+    if (!/og:image/.test(html) && /dpgmedia|privacy|consent|cookie/i.test(html))
+      log('LET OP: cookiemelding van DPG ontvangen via', via, '- proxy moet cookies meesturen');
+    log('artikel', short(link), 'via', via, '→', html.length, 'tekens, titel "' + title + '",',
+        /og:image/.test(html) ? 'foto gevonden' : 'geen foto');
+    return html;
+  } catch (e) { log('artikel niet bereikbaar', short(link)); return ''; }
+}
+
+// 1) De deelfoto (og:image) van het artikel zelf: die is altijd groot.
+function ogFromHtml(html) {
+  if (!html) return '';
+  const m = html.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+         || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["']og:image["']/i);
+  return m ? m[1].replace(/&amp;/g, '&') : '';
+}
+
+
+// 2) Grotere varianten van de feed-afbeelding raden (bv. _sqr256 -> _sqr1024).
+//    Het formaat blijft van hetzelfde type als het origineel, anders wordt de uitsnede vervormd.
+function sizeVariants(url) {
+  const m = url && url.match(/^(https?:\/\/[^/]+\/m\/)([a-z0-9]+)_([a-z]+)(\d+)(.*)$/i);
+  if (!m) return [];
+  const [, base, id, kind, , rest] = m;
+  return [1920, 1600, 1280, 1024].map(px => `${base}${id}_${kind}${px}${rest}`);
+}
+
+// Verhouding (breedte/hoogte) van de uitsnede die in de URL staat, bv. /464/0/5033/5033/ = 1.0
+function cropRatio(url) {
+  const m = url && url.match(/\/m\/[^/]+\/(\d+)\/(\d+)\/(\d+)\/(\d+)(?:\/|$)/);
+  return m && +m[4] > 0 ? +m[3] / +m[4] : null;
+}
+
+// Vervormd? Dan wijkt de echte verhouding van het plaatje af van de uitsnede.
+function isDistorted(src, img) {
+  const expected = cropRatio(src);
+  if (!expected) return false;
+  const actual = img.naturalWidth / img.naturalHeight;
+  return Math.abs(actual - expected) / expected > 0.04;
+}
+
+function loadImage(src, timeout = 9000) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    const t = setTimeout(() => { img.src = ''; rej(); }, timeout);
+    img.onload = () => { clearTimeout(t); img.naturalWidth > 1 ? res(img) : rej(); };
+    img.onerror = () => { clearTimeout(t); rej(); };
+    img.src = src;
+  });
+}
+
+async function bestImage(a, html) {
+  const og = ogFromHtml(html);
+  const list = [og, ...(og ? sizeVariants(og) : []), ...sizeVariants(a.img), a.img].filter(Boolean);
+  const score = p => p.w * (p.w / p.h >= 1.2 ? 1.5 : 1);   // liggende foto's krijgen voorrang op een breed scherm
+  let best = null;
+  for (const src of [...new Set(list)]) {
+    try {
+      const img = await loadImage(src);
+      if (isDistorted(src, img)) continue;   // uitgerekte variant overslaan
+      const p = { src, w: img.naturalWidth, h: img.naturalHeight };
+      if (!best || score(p) > score(best)) best = p;
+      if (p.w >= 1600 && p.w / p.h >= 1.2) break;   // groot en liggend: klaar
+    } catch (e) { /* volgende */ }
+  }
+  return best || { src: '', w: 0, h: 0 };
+}
+
+/* ---------- Opbouw ---------- */
+function timeAgo(d) {
+  const min = Math.round((Date.now() - d) / 60000);
+  if (min < 1) return 'zojuist';
+  if (min < 60) return `${min} min geleden`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `${h} uur geleden`;
+  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+function buildSlide(a, i) {
+  const el = document.createElement('div');
+  el.className = 'slide';
+  el.dataset.kb = i % 3;
+  const words = a.title.split(' ').map((w, n) =>
+    `<span class="w"><span style="--i:${n}">${esc(w)}</span></span>`).join(' ');
+  const bgStyle = a.photo.src ? `background-image:url("${a.photo.src.replace(/"/g, '%22').replace(/'/g, '%27')}")` : 'background:linear-gradient(135deg,#1a1d24,#07080b)';
+  el.innerHTML = `
+    <div class="fill" style='${bgStyle}'></div>
+    <div class="bg" style='${bgStyle}'></div>
+    <div class="shade"></div>
+    ${DEBUG ? `<div class="debug">${a.photo.w}×${a.photo.h}<br>${esc(a.photo.src)}</div>` : ''}
+    <div class="content">
+      <div class="meta"><span class="tag">${esc(a.cat)}</span><span>${timeAgo(a.date)}</span></div>
+      <h1 class="title">${words}</h1>
+      <div class="intro"><div class="intro-inner">${esc(a.intro)}</div></div>
+    </div>`;
+  return el;
+}
+
+let slides = [], current = -1, pending = null, timer = null, scrollTimer = null;
+
+function render(articles) {
+  stage.innerHTML = '';
+  progress.innerHTML = '';
+  slides = articles.map((a, i) => {
+    const s = buildSlide(a, i);
+    s._a = a;
+    stage.appendChild(s);
+    const b = document.createElement('div');
+    b.className = 'bar'; b.innerHTML = '<i></i>';
+    progress.appendChild(b);
+    return s;
+  });
+  current = -1;
+}
+
+// Meet of de inleiding past; zo niet, bepaal scrollafstand en extra tijd.
+function planScroll(slide) {
+  const box = slide.querySelector('.intro');
+  const inner = slide.querySelector('.intro-inner');
+  inner.style.transition = 'none';
+  inner.style.transform = 'translateY(0)';
+  const overflow = inner.scrollHeight - box.clientHeight;
+  if (overflow <= 4) { box.classList.remove('scrolls'); return { dist: 0, dur: 0 }; }
+  box.classList.add('scrolls');
+  const lineH = parseFloat(getComputedStyle(box).lineHeight) || 30;
+  const dist = overflow + lineH * 0.6;           // net iets verder zodat de laatste regel goed leesbaar is
+  const dur = Math.max(2500, (dist / lineH) * SCROLL_SPEED);
+  return { dist, dur };
+}
+
+function show(n) {
+  clearTimeout(scrollTimer);
+  const bars = [...progress.children];
+  slides.forEach((s, i) => {
+    s.classList.remove('leaving');
+    if (i === current && i !== n) { s.classList.remove('active'); s.classList.add('leaving'); }
+  });
+
+  const next = slides[n];
+  const { dist, dur } = planScroll(next);
+  const total = Math.max(SLIDE_MS, SCROLL_DELAY + 1400 + dur + 3000);
+  next.style.setProperty('--slide', total + 'ms');
+
+  next.classList.remove('active'); void next.offsetWidth; next.classList.add('active');
+
+  if (dist) {
+    const inner = next.querySelector('.intro-inner');
+    scrollTimer = setTimeout(() => {
+      inner.style.transition = `transform ${dur}ms cubic-bezier(.45,0,.55,1)`;
+      inner.style.transform = `translateY(-${dist}px)`;
+    }, SCROLL_DELAY + 1400);
+  }
+
+  bars.forEach((b, i) => {
+    b.classList.remove('run', 'done');
+    if (i < n) b.classList.add('done');
+  });
+  const bar = bars[n];
+  bar.querySelector('i').style.animationDuration = total + 'ms';
+  void bar.offsetWidth; bar.classList.add('run');
+
+  current = n;
+  return total;
+}
+
+function advance() {
+  let nxt = current + 1;
+  if (nxt >= slides.length) {
+    if (pending) { render(pending); pending = null; }
+    nxt = 0;
+  }
+  const total = show(nxt);
+  timer = setTimeout(advance, total);
+}
+
+async function enrich(a) {
+  const html = await fetchArticle(a.link);
+  a.photo = await bestImage(a, html);
+}
+
+async function prepare() {
+  const items = await getFeed();
+  await Promise.all(items.map(async a => { await enrich(a); }));
+  return items;
+}
+
+async function start() {
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    log('versie 23-10 14:25 — start, feed ophalen');
+    const items = await prepare();
+    log('klaar:', items.length, 'artikelen');
+    render(items);
+    statusEl.classList.add('hide');
+    clearTimeout(timer);
+    advance();
+  } catch (e) {
+    console.error('[NU.nl]', e);
+    statusText.textContent = 'Nieuws niet bereikbaar — opnieuw proberen' + (DEBUG ? ` (${e && e.message})` : '');
+    setTimeout(start, 30000);
+  }
+}
+
+let lastTitles = '';
+setInterval(async () => {
+  try {
+    const items = await getFeed();
+    const titles = items.map(a => a.title).join('|');
+    if (titles === lastTitles) return;
+    await Promise.all(items.map(async a => { await enrich(a); }));
+    lastTitles = titles;
+    pending = items;
+  } catch (e) { /* oude artikelen blijven staan */ }
+}, REFRESH_MS);
+
+start().then(() => {
+  lastTitles = [...stage.querySelectorAll('.title')].map(t => t.textContent.replace(/\s+/g, ' ').trim()).join('|');
+});
+</script>
+</body>
+</html>
