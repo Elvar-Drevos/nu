@@ -204,6 +204,7 @@ const FADE_MS      = 1600;           // duur van de overgang
 const REFRESH_MS   = 5 * 60 * 1000;  // feed elke 5 minuten verversen
 const SCROLL_DELAY = 3500;           // wachttijd voordat de inleiding gaat scrollen
 const SCROLL_SPEED = 2200;           // ms per regel tekst bij het scrollen
+const FETCH_ARTICLE = false;        // artikelpagina ophalen voor de deelfoto (alleen zinvol als je proxy nu.nl-cookies meestuurt)
 const LOGO_URL     = '';             // leeg = ingebouwd NU.nl-logo; of een link naar een ander logobestand
 
 // Volgorde waarin pagina's worden opgehaald. Eerst direct, dan via proxies.
@@ -279,23 +280,31 @@ async function fetchVia(url, check, timeout = 8000) {
 
 // Probeert de feed met en zonder cache-buster, en valt terug op de algemene /rss-feed.
 const FEED_FALLBACKS = [FEED_URL, 'https://www.nu.nl/rss'];
-let workingFeed = null;
+const MEMO_KEY = 'nunl-feed-v1';
+let memo = null;
+try { memo = JSON.parse(localStorage.getItem(MEMO_KEY)); } catch (e) {}
+if (memo && memo.feed === FEED_URL && SOURCES[memo.src]) workingSource = SOURCES[memo.src];
+else memo = null;
 
 async function getFeed() {
-  const bases = workingFeed ? [workingFeed] : [...new Set(FEED_FALLBACKS)];
+  // Eerst de combinatie die de vorige keer werkte, dan de rest
+  let tries = [];
+  for (const base of [...new Set(FEED_FALLBACKS)]) tries.push({ base, bust: true }, { base, bust: false });
+  if (memo) tries = [{ base: memo.base, bust: memo.bust }, ...tries.filter(t => !(t.base === memo.base && t.bust === memo.bust))];
   const errors = [];
-  for (const base of bases) {
-    for (const url of [base + (base.includes('?') ? '&' : '?') + '_=' + Date.now(), base]) {
-      try {
-        const txt = await fetchVia(url, t => t.includes('<item'));
-        workingFeed = base;
-        console.log('[NU.nl] feed geladen via', url);
-        return parseFeed(txt);
-      } catch (e) { errors.push(url); }
-    }
+  for (const t of tries) {
+    const url = t.bust ? t.base + (t.base.includes('?') ? '&' : '?') + '_=' + Date.now() : t.base;
+    try {
+      const txt = await fetchVia(url, x => x.includes('<item'), 6000);
+      memo = { feed: FEED_URL, base: t.base, bust: t.bust, src: SOURCES.indexOf(workingSource) };
+      try { localStorage.setItem(MEMO_KEY, JSON.stringify(memo)); } catch (e) {}
+      log('feed geladen via', SRC_NAMES[memo.src] || '?', short(url));
+      return parseFeed(txt);
+    } catch (e) { errors.push(url); }
   }
-  workingFeed = null;
-  console.warn('[NU.nl] geen feed bereikbaar, geprobeerd:', errors);
+  memo = null;
+  try { localStorage.removeItem(MEMO_KEY); } catch (e) {}
+  log('geen feed bereikbaar');
   throw new Error('Feed niet bereikbaar');
 }
 
@@ -383,16 +392,15 @@ function loadImage(src, timeout = 9000) {
 
 async function bestImage(a, html) {
   const og = ogFromHtml(html);
-  const list = [og, ...(og ? sizeVariants(og) : []), ...sizeVariants(a.img), a.img].filter(Boolean);
-  const score = p => p.w * (p.w / p.h >= 1.2 ? 1.5 : 1);   // liggende foto's krijgen voorrang op een breed scherm
+  const list = [...new Set([...(og ? sizeVariants(og) : []), og, ...sizeVariants(a.img), a.img].filter(Boolean))];
   let best = null;
-  for (const src of [...new Set(list)]) {
+  for (const src of list) {           // van groot naar klein; de eerste goede is meteen raak
     try {
-      const img = await loadImage(src);
+      const img = await loadImage(src, 6000);
       if (isDistorted(src, img)) continue;   // uitgerekte variant overslaan
       const p = { src, w: img.naturalWidth, h: img.naturalHeight };
-      if (!best || score(p) > score(best)) best = p;
-      if (p.w >= 1600 && p.w / p.h >= 1.2) break;   // groot en liggend: klaar
+      if (!best || p.w > best.w) best = p;
+      if (p.w >= 1000) break;
     } catch (e) { /* volgende */ }
   }
   return best || { src: '', w: 0, h: 0 };
@@ -510,8 +518,9 @@ function advance() {
 }
 
 async function enrich(a) {
-  const html = await fetchArticle(a.link);
+  const html = FETCH_ARTICLE ? await fetchArticle(a.link) : '';
   a.photo = await bestImage(a, html);
+  return a;
 }
 
 async function prepare() {
@@ -520,12 +529,23 @@ async function prepare() {
   return items;
 }
 
+function applyPhoto(a) {
+  const slide = slides.find(s => s._a === a);
+  if (!slide || !a.photo.src) return;
+  const url = `url("${a.photo.src.replace(/"/g, '%22')}")`;
+  slide.querySelectorAll('.bg, .fill').forEach(el => { el.style.background = ''; el.style.backgroundImage = url; });
+}
+
 async function start() {
   try {
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    log('versie 23-10 14:25 — start, feed ophalen');
-    const items = await prepare();
-    log('klaar:', items.length, 'artikelen');
+    if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]);
+    log('versie 23-10 19:35 — start, feed ophalen');
+    const items = await getFeed();
+    items.forEach(a => { a.photo = { src: '', w: 0, h: 0 }; });
+    const jobs = items.map(a => enrich(a));
+    await jobs[0];                                   // alleen op het eerste artikel wachten
+    jobs.slice(1).forEach(j => j.then(applyPhoto));  // de rest vult zich aan zodra de foto binnen is
+    log('eerste artikel klaar, start');
     render(items);
     statusEl.classList.add('hide');
     clearTimeout(timer);
