@@ -199,6 +199,7 @@
 /* ================= Instellingen ================= */
 const FEED_URL     = 'https://www.nu.nl/rss/Algemeen';
 const ITEMS        = 2;              // aantal berichten (nieuwste eerst)
+const START_DELAY_MS = 0;            // extra wachttijd (ms) nadat de pagina zichtbaar is, voor het geval Yodeck later in beeld komt
 const LOOP         = false;          // false = na het laatste bericht stoppen; true = opnieuw beginnen
 const SLIDE_MS     = 10000;          // minimale tijd per artikel (wordt langer als de inleiding moet scrollen)
 const FADE_MS      = 1600;           // duur van de overgang
@@ -538,6 +539,33 @@ function applyPhoto(a) {
   slide.querySelectorAll('.bg, .fill').forEach(el => { el.style.background = ''; el.style.backgroundImage = url; });
 }
 
+// Wacht tot de pagina echt zichtbaar is. Yodeck laadt pagina's soms vooraf op de achtergrond;
+// requestAnimationFrame draait pas als er echt getekend wordt.
+function whenVisible() {
+  return new Promise(res => {
+    const go = () => requestAnimationFrame(() => requestAnimationFrame(() => res()));
+    if (document.visibilityState === 'visible') return go();
+    document.addEventListener('visibilitychange', function h() {
+      if (document.visibilityState !== 'visible') return;
+      document.removeEventListener('visibilitychange', h);
+      go();
+    });
+  });
+}
+
+// Verborgen: alles stilzetten. Weer zichtbaar: vers ophalen en opnieuw bij het nieuwste bericht beginnen.
+let hiddenWhileRunning = false;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    if (slides.length) hiddenWhileRunning = true;
+    clearTimeout(timer); clearTimeout(scrollTimer);
+  } else if (hiddenWhileRunning) {
+    hiddenWhileRunning = false;
+    log('weer zichtbaar: opnieuw bij het begin');
+    start();
+  }
+});
+
 async function start() {
   try {
     if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]);
@@ -550,7 +578,11 @@ async function start() {
     log('eerste artikel klaar, start');
     render(items);
     statusEl.classList.add('hide');
-    clearTimeout(timer);
+    clearTimeout(timer); clearTimeout(scrollTimer);
+    await whenVisible();                       // pas starten als de pagina echt in beeld is
+    if (START_DELAY_MS) await new Promise(r => setTimeout(r, START_DELAY_MS));
+    log('zichtbaar, slideshow start');
+    current = -1;
     advance();
   } catch (e) {
     console.error('[NU.nl]', e);
