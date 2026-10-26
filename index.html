@@ -10,40 +10,48 @@
 <style>
   :root {
     --accent: #FF6823;
+    --accent-2: #ffb07a;
     --bg: #07080b;
     --card: #11131a;
-    --line: rgba(255,255,255,.07);
+    --shade: 9,10,14;
+    --line: rgba(255,255,255,.08);
     --text: #ffffff;
-    --muted: rgba(255,255,255,.80);
+    --muted: rgba(255,255,255,.82);
     --dim: rgba(255,255,255,.55);
 
-    /* Liggend: twee kolommen naast elkaar */
-    --pad: 3.4vmin;
-    --gap: 3vmin;
+    /* ---- Liggend: groot bericht links, tweede rechts ---- */
+    --pad: 3.2vmin;
+    --gap: 2.6vmin;
     --head-h: 9vmin;
-    --logo-h: 7.4vmin;
-    --label: 2.6vmin;
-    --clock: 3.4vmin;
-    --photo-h: 52%;
-    --tag: 1.8vmin;
-    --title: 3.7vmin;
-    --intro: 2.35vmin;
-    --title-lines: 3;
+    --logo-h: 7.6vmin;
+    --label: 2.7vmin;
+    --clock: 4.6vmin;
+    --radius: 2.2vmin;
+    --tag: 1.75vmin;
+    --hero-title: 5.6vmin;
+    --hero-intro: 2.55vmin;
+    --hero-lines: 3;
+    --side-title: 3.3vmin;
+    --side-intro: 2.2vmin;
+    --hero-title-lines: 3;
   }
   @media (orientation: portrait) {
     :root {
-      /* Staand: twee kaarten onder elkaar */
-      --pad: 4.5vw;
-      --gap: 3.5vw;
-      --head-h: 13vw;
-      --logo-h: 11.5vw;
-      --label: 4.2vw;
-      --clock: 5vw;
-      --photo-h: 40%;
+      /* ---- Staand: groot bericht boven, tweede eronder ---- */
+      --pad: 4.4vw;
+      --gap: 3.4vw;
+      --head-h: 14vw;
+      --logo-h: 12vw;
+      --label: 4.3vw;
+      --clock: 7vw;
+      --radius: 3.4vw;
       --tag: 2.7vw;
-      --title: 5vw;
-      --intro: 3.35vw;
-      --title-lines: 3;
+      --hero-title: 6.1vw;
+      --hero-intro: 3.4vw;
+      --hero-lines: 3;
+      --hero-title-lines: 4;
+      --side-title: 4.2vw;
+      --side-intro: 3vw;
     }
   }
 
@@ -52,8 +60,8 @@
   body {
     font-family: 'DM Sans', sans-serif; cursor: none; -webkit-font-smoothing: antialiased;
     background:
-      radial-gradient(ellipse 70% 50% at 0% 0%, rgba(255,104,35,.10), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(40,60,140,.12), transparent 60%),
+      radial-gradient(ellipse 55% 45% at 8% 0%, rgba(255,104,35,.16), transparent 65%),
+      radial-gradient(ellipse 50% 50% at 100% 100%, rgba(56,78,180,.14), transparent 65%),
       var(--bg);
   }
 
@@ -63,83 +71,133 @@
   }
 
   /* ---------- Kop ---------- */
-  header { display: flex; align-items: center; justify-content: space-between; min-width: 0; }
-  .brand { display: flex; align-items: center; gap: calc(var(--logo-h) * .32); }
-  .brand svg, .brand img { height: var(--logo-h); width: auto; display: block; }
-  .brand .label { display: flex; flex-direction: column; gap: .25em; }
-  .brand .label b {
-    font-family: 'Sora', sans-serif; font-weight: 700; font-size: var(--label); letter-spacing: -.01em; line-height: 1;
+  header {
+    position: relative; display: flex; align-items: center; justify-content: space-between; min-width: 0;
   }
-  .brand .label span {
-    font-family: 'DM Mono', monospace; font-size: calc(var(--label) * .52); letter-spacing: .14em;
+  header::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: calc(var(--gap) * -.5); height: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, rgba(255,104,35,.35) 22%, rgba(255,255,255,.06) 60%, transparent 100%);
+  }
+  .brand { display: flex; align-items: center; gap: calc(var(--logo-h) * .3); }
+  .brand svg, .brand img { height: var(--logo-h); width: auto; display: block; }
+  .label { display: flex; flex-direction: column; gap: .3em; }
+  .label b {
+    display: flex; align-items: center; gap: .45em;
+    font-family: 'Sora', sans-serif; font-weight: 800; font-size: var(--label); letter-spacing: -.015em; line-height: 1;
+  }
+  .label span {
+    font-family: 'DM Mono', monospace; font-size: calc(var(--label) * .5); letter-spacing: .16em;
     text-transform: uppercase; color: var(--dim);
   }
-  .clock {
-    font-family: 'DM Mono', monospace; font-weight: 500; font-size: var(--clock); letter-spacing: .02em;
-    padding: .28em .75em; border-radius: 999px; background: var(--card); border: 1px solid var(--line);
+  /* "live"-stip: klein element, dus licht voor de Pi */
+  .live { position: relative; width: .42em; height: .42em; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
+  .live::after {
+    content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--accent);
+    animation: ping 2.2s ease-out infinite;
   }
+  @keyframes ping { 0% { transform: scale(1); opacity: .7; } 80%, 100% { transform: scale(2.8); opacity: 0; } }
 
-  /* ---------- Kaarten ---------- */
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); min-height: 0; }
-  @media (orientation: portrait) { .grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
+  .when { display: flex; align-items: center; gap: calc(var(--clock) * .45); }
+  .date {
+    font-family: 'DM Mono', monospace; font-size: calc(var(--clock) * .32); letter-spacing: .14em;
+    text-transform: uppercase; color: var(--dim); text-align: right; line-height: 1.5;
+  }
+  .clock {
+    font-family: 'Sora', sans-serif; font-weight: 700; font-size: var(--clock); letter-spacing: -.02em; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (orientation: portrait) { .date { display: none; } }
+
+  /* ---------- Indeling ---------- */
+  .grid {
+    display: grid; gap: var(--gap); min-height: 0;
+    grid-template-columns: 1.55fr 1fr;
+  }
+  @media (orientation: portrait) {
+    .grid { grid-template-columns: 1fr; grid-template-rows: 1.55fr 1fr; }
+  }
 
   .card {
-    position: relative; min-height: 0; min-width: 0;
-    display: grid; grid-template-rows: var(--photo-h) 1fr;
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: calc(var(--pad) * .6); overflow: hidden;
-    box-shadow: 0 2vmin 6vmin rgba(0,0,0,.35);
-    opacity: 0; transform: translateY(2.5vmin);
+    position: relative; min-height: 0; min-width: 0; overflow: hidden;
+    border-radius: var(--radius); background: var(--card); border: 1px solid var(--line);
   }
-  .go .card { animation: rise 1100ms cubic-bezier(.2,.8,.2,1) forwards; }
-  .go .card:nth-child(2) { animation-delay: 220ms; }
-  @keyframes rise { to { opacity: 1; transform: none; } }
-
   .photo { position: relative; overflow: hidden; background: #1a1d24; }
-  .photo .img {
+  .img {
     position: absolute; inset: 0; background-size: cover; background-position: center 30%;
-    transition: opacity 1200ms ease;
-  }
-  .photo::after {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(0deg, rgba(17,19,26,.85) 0%, rgba(17,19,26,0) 38%);
-  }
-  .badges {
-    position: absolute; z-index: 2; left: calc(var(--pad) * .7); bottom: calc(var(--pad) * .55);
-    display: flex; align-items: center; gap: .8em;
-    font-family: 'DM Mono', monospace; font-size: var(--tag); letter-spacing: .08em; text-transform: uppercase;
-  }
-  .tag { background: var(--accent); color: #fff; padding: .45em .95em; border-radius: 999px; font-weight: 500; }
-  .time { color: var(--muted); text-shadow: 0 1px 6px rgba(0,0,0,.6); }
-  .num {
-    position: absolute; z-index: 2; top: calc(var(--pad) * .55); right: calc(var(--pad) * .7);
-    font-family: 'DM Mono', monospace; font-size: var(--tag); color: #fff; letter-spacing: .1em;
-    background: rgba(7,8,11,.55); padding: .4em .7em; border-radius: .6em;
   }
 
-  .text {
+  .badges {
+    display: flex; align-items: center; gap: .9em; margin-bottom: 1.1em; white-space: nowrap; flex-wrap: nowrap;
+    font-family: 'DM Mono', monospace; font-size: var(--tag); letter-spacing: .1em; text-transform: uppercase;
+  }
+  .num { font-weight: 500; color: var(--accent-2); }
+  .num::after { content: ''; display: inline-block; width: 1.8em; height: 2px; background: currentColor; vertical-align: middle; margin-left: .8em; opacity: .7; }
+  .tag { background: var(--accent); color: #fff; padding: .42em .9em; border-radius: 999px; font-weight: 500; }
+  .time { color: var(--muted); }
+
+  .title { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+  .intro { position: relative; min-height: 0; overflow: hidden; line-height: 1.5; color: var(--muted); }
+  .intro-inner { transition: opacity 600ms ease; will-change: transform; }
+  .intro.scrolls::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1.6em; pointer-events: none;
+    background: linear-gradient(180deg, rgba(var(--fade), 0), rgb(var(--fade)));
+  }
+
+  /* ---------- Groot bericht: tekst op de foto ---------- */
+  .card.hero { --fade: var(--shade); }
+  .hero .photo { position: absolute; inset: 0; }
+  /* Grote foto zoomt heel langzaam in en blijft daarna staan.
+     Alleen een transform op een eigen laag, zodat het soepel loopt op een Pi. */
+  .hero .img { will-change: transform; transform: translateZ(0); }
+  .go .hero .img { animation: slowzoom var(--zoom-time, 40s) linear both; }
+  @keyframes slowzoom { from { transform: translateZ(0) scale(1); } to { transform: translateZ(0) scale(1.1); } }
+  .hero .photo::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      linear-gradient(0deg, rgba(var(--shade), .97) 0%, rgba(var(--shade), .88) 26%, rgba(var(--shade), .35) 52%, rgba(var(--shade), 0) 70%),
+      linear-gradient(90deg, rgba(var(--shade), .35) 0%, rgba(var(--shade), 0) 50%);
+  }
+  .hero .text {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: calc(var(--pad) * 1.1) calc(var(--pad) * 1.15) calc(var(--pad) * 1.05);
+  }
+  .hero .text::before {   /* oranje accentlijn links van de tekst */
+    content: ''; position: absolute; left: 0; top: calc(var(--pad) * 1.1); bottom: calc(var(--pad) * 1.05);
+    width: .55vmin; min-width: 4px; background: var(--accent); border-radius: 0 4px 4px 0;
+  }
+  .hero .title {
+    font-size: var(--hero-title); font-weight: 800; line-height: 1.07; margin-bottom: .45em;
+    display: -webkit-box; -webkit-line-clamp: var(--hero-title-lines); -webkit-box-orient: vertical; overflow: hidden;
+    text-shadow: 0 2px 20px rgba(0,0,0,.35);
+  }
+  .hero .intro { font-size: var(--hero-intro); max-height: calc(1.5em * var(--hero-lines)); max-width: 64ch; }
+
+  /* ---------- Tweede bericht: foto boven, tekst onder ---------- */
+  .card.side { --fade: 17,19,26; display: grid; grid-template-rows: 48% 1fr; }
+  .side .photo::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(0deg, rgba(17,19,26,.6) 0%, rgba(17,19,26,0) 40%);
+  }
+  .side .text {
     min-height: 0; display: flex; flex-direction: column;
-    padding: calc(var(--pad) * .6) calc(var(--pad) * .7) calc(var(--pad) * .7);
+    padding: calc(var(--pad) * .85) calc(var(--pad) * .9) calc(var(--pad) * .9);
   }
-  .title {
-    font-family: 'Sora', sans-serif; font-weight: 700; font-size: var(--title); line-height: 1.14; letter-spacing: -.015em;
-    margin-bottom: .55em; text-wrap: balance;
-    display: -webkit-box; -webkit-line-clamp: var(--title-lines); -webkit-box-orient: vertical; overflow: hidden;
-    flex: 0 0 auto;
+  .side .title {
+    font-size: var(--side-title); line-height: 1.15; margin-bottom: .55em; flex: 0 0 auto;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .intro {
-    position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden;
-    font-size: var(--intro); line-height: 1.5; color: var(--muted);
+  .side .intro { font-size: var(--side-intro); flex: 1 1 auto; }
+  @media (orientation: portrait) {
+    /* staand: tweede bericht met de foto links */
+    .card.side { grid-template-rows: none; grid-template-columns: 38% 1fr; }
+    .side .num { display: none; }
+    .side .badges { font-size: calc(var(--tag) * .88); gap: .7em; }
+    .side .title { -webkit-line-clamp: 4; }
   }
-  .intro.scrolls {
-    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
-            mask-image: linear-gradient(180deg, #000 0%, #000 80%, transparent 100%);
-  }
-  .intro-inner { transition: opacity 600ms ease; }
 
   /* nieuwe inhoud zacht laten verschijnen bij verversen */
-  .swap { animation: swap 900ms ease; }
-  @keyframes swap { from { opacity: 0; } to { opacity: 1; } }
+  .animate .swap .text { animation: swap 900ms ease both; }
+  @keyframes swap { from { opacity: .2; } to { opacity: 1; } }
 
   /* ---------- Laden / fout ---------- */
   #status {
@@ -156,17 +214,14 @@
     background: rgba(0,0,0,.88); color: #9f9; font: 13px/1.45 'DM Mono', monospace; padding: 10px 12px; border-radius: 8px;
     white-space: pre-wrap; word-break: break-all;
   }
-
-  /* Rustig: zet ANIMATE op false voor een volledig stilstaande pagina */
-  .still .card { opacity: 1; transform: none; animation: none !important; }
 </style>
 </head>
 <body>
 
 <div class="page" id="page">
   <header>
-    <div class="brand"><span id="logo"></span><div class="label"><b>Laatste nieuws</b><span id="updated">nu.nl</span></div></div>
-    <div class="clock" id="clock">--:--</div>
+    <div class="brand"><span id="logo"></span><div class="label"><b><i class="live"></i>Laatste nieuws</b><span id="updated">nu.nl</span></div></div>
+    <div class="when"><div class="date" id="date"></div><div class="clock" id="clock">--:--</div></div>
   </header>
   <main class="grid" id="grid"></main>
 </div>
@@ -177,7 +232,8 @@
 /* ================= Instellingen ================= */
 const FEED_URL     = 'https://www.nu.nl/rss/Algemeen';
 const ITEMS        = 2;                // aantal berichten
-const ANIMATE      = true;             // false = kaarten verschijnen zonder inkomst-animatie
+const ANIMATE      = true;             // false = nieuwe berichten bij verversen zonder zachte overgang tonen
+const ZOOM_SECONDS = 40;               // hoe lang het langzaam inzoomen op de grote foto duurt (0 = niet zoomen)
 const REFRESH_MS   = 5 * 60 * 1000;    // elke 5 minuten kijken of er nieuws is
 const SCROLL_PAUSE = 4000;             // pauze (ms) voor en na het scrollen van een lange inleiding
 const SCROLL_SPEED = 2600;             // ms per regel bij het scrollen
@@ -197,7 +253,9 @@ const page = document.getElementById('page');
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('status');
 const statusText = document.getElementById('statusText');
-if (!ANIMATE) page.classList.add('still');
+if (ANIMATE) page.classList.add('animate');
+if (ZOOM_SECONDS > 0) page.style.setProperty('--zoom-time', ZOOM_SECONDS + 's');
+else document.head.insertAdjacentHTML('beforeend', '<style>.go .hero .img{animation:none!important}</style>');
 
 let dbgBox = null;
 function log(...parts) {
@@ -216,8 +274,9 @@ function short(u) { return String(u).replace(/^https?:\/\/(www\.)?/, '').slice(0
 const NU_LOGO = `<svg viewBox="0 0 133.57635 119.38008" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NU.nl"><g transform="translate(-41.843256,-10.593749)"><g transform="matrix(5.5649859,0,0,5.5649859,41.843256,3.5039571)"><path fill="#020051" d="m 10.714,1.846 c 4.554,0 8.408,3.007 9.689,7.145 a 3.043,3.043 0 0 0 0,6.018 c -1.281,4.138 -5.135,7.145 -9.69,7.145 C 5.114,22.154 0.572,17.607 0.572,12 0.572,6.392 5.114,1.846 10.715,1.846 Z"/><path fill="none" stroke="#ffffff" stroke-width="0.572" d="m 10.714,1.56 c 4.602,0 8.62,3.012 9.961,7.347 l 0.1,0.317 -0.33,0.05 A 2.757,2.757 0 0 0 18.099,12 a 2.756,2.756 0 0 0 2.346,2.726 l 0.33,0.05 -0.1,0.317 A 10.433,10.433 0 0 1 10.714,22.44 C 4.954,22.44 0.286,17.765 0.286,12 0.286,6.234 4.954,1.56 10.714,1.56 Z"/><path fill="#b50c16" d="m 18.358,11.955 a 2.538,2.538 0 0 1 2.535,-2.539 2.5385,2.5385 0 0 1 0,5.077 2.538,2.538 0 0 1 -2.535,-2.538 z"/><path fill="none" stroke="#ffffff" stroke-width="0.572" d="m 18.072,11.955 a 2.823,2.823 0 0 1 2.821,-2.824 2.824,2.824 0 0 1 0,5.648 2.823,2.823 0 0 1 -2.821,-2.824 z"/><path fill="#ffffff" d="m 3.675,7.92 c 0,-0.155 0.156,-0.323 0.313,-0.323 h 5.968 c 0.165,0 0.272,0.162 0.272,0.322 v 8.2 c 0,0.155 -0.088,0.284 -0.272,0.284 h -2.42 c -0.162,0 -0.24,-0.113 -0.24,-0.285 v -6.1 c 0,-0.427 -0.69,-0.416 -0.69,10e-4 v 6.1 a 0.282,0.282 0 0 1 -0.28,0.284 H 3.988 c -0.167,0 -0.313,-0.111 -0.313,-0.285 z m 7.243,8.215 c 0,0.154 0.026,0.268 0.182,0.268 h 5.969 c 0.165,0 0.23,-0.109 0.23,-0.268 v -8.2 c 0,-0.155 -0.046,-0.338 -0.23,-0.338 h -2.42 c -0.162,0 -0.282,0.167 -0.282,0.338 v 6.102 c 0,0.426 -0.69,0.415 -0.69,-0.002 v -6.1 c 0,-0.165 -0.09,-0.338 -0.239,-0.338 H 11.1 c -0.166,0 -0.182,0.165 -0.182,0.338 z m 10.255,-3.156 h -0.392 v -0.757 c 0,-0.16 -0.009,-0.264 -0.025,-0.31 a 0.216,0.216 0 0 0 -0.083,-0.11 0.23,0.23 0 0 0 -0.135,-0.04 0.314,0.314 0 0 0 -0.183,0.056 0.285,0.285 0 0 0 -0.111,0.148 c -0.02,0.061 -0.03,0.175 -0.03,0.34 v 0.672 h -0.391 v -1.483 h 0.363 v 0.218 a 0.593,0.593 0 0 1 0.489,-0.251 0.58,0.58 0 0 1 0.237,0.047 0.388,0.388 0 0 1 0.239,0.284 c 0.015,0.061 0.022,0.15 0.022,0.264 v 0.921 m 0.399,0 v -2.047 h 0.392 v 2.047 h -0.392"/></g></g></svg>`;
 document.getElementById('logo').innerHTML = LOGO_URL ? `<img src="${LOGO_URL}" alt="NU.nl">` : NU_LOGO;
 function tick() {
-  document.getElementById('clock').textContent =
-    new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('date').textContent = now.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 tick(); setInterval(tick, 1000);
 
@@ -352,10 +411,9 @@ function cardHtml(a, i) {
   return `
     <div class="photo">
       <div class="img" style='${a.photo ? `background-image:${cssUrl(a.photo)}` : ''}'></div>
-      <div class="num">0${i + 1}</div>
-      <div class="badges"><span class="tag">${esc(a.cat)}</span><span class="time" data-date="${+a.date}">${timeAgo(a.date)}</span></div>
     </div>
     <div class="text">
+      <div class="badges"><span class="num">0${i + 1}</span><span class="tag">${esc(a.cat)}</span><span class="time" data-date="${+a.date}">${timeAgo(a.date)}</span></div>
       <h2 class="title">${esc(a.title)}</h2>
       <div class="intro"><div class="intro-inner">${esc(a.intro)}</div></div>
     </div>`;
@@ -367,7 +425,7 @@ function render(items, fresh) {
   if (key === shownKey) return;
   shownKey = key;
   if (!grid.children.length) {
-    grid.innerHTML = items.map((a, i) => `<article class="card">${cardHtml(a, i)}</article>`).join('');
+    grid.innerHTML = items.map((a, i) => `<article class="card ${i === 0 ? 'hero' : 'side'}">${cardHtml(a, i)}</article>`).join('');
   } else {
     items.forEach((a, i) => {
       const card = grid.children[i];
